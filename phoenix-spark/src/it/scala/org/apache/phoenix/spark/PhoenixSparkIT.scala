@@ -16,14 +16,12 @@ package org.apache.phoenix.spark
 import java.sql.{Connection, DriverManager}
 import java.util.Date
 
-import org.apache.hadoop.hbase.{HConstants}
 import org.apache.phoenix.end2end.BaseHBaseManagedTimeIT
 import org.apache.phoenix.query.BaseTest
-import org.apache.phoenix.schema.{ColumnNotFoundException}
 import org.apache.phoenix.schema.types.PVarchar
-import org.apache.phoenix.util.{SchemaUtil, ColumnInfo}
-import org.apache.spark.sql.{Row, SaveMode, SQLContext}
+import org.apache.phoenix.util.{ColumnInfo, SchemaUtil}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, SQLContext, SaveMode}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.joda.time.DateTime
 import org.scalatest._
@@ -363,11 +361,21 @@ class PhoenixSparkIT extends FunSuite with Matchers with BeforeAndAfterAll {
 
     // Load TABLE1, save as TABLE1_COPY
     val sqlContext = new SQLContext(sc)
-    val df = sqlContext.load("org.apache.phoenix.spark", Map("table" -> "TABLE1",
-      "zkUrl" -> quorumAddress))
+    val df = sqlContext
+      .read
+      .format("org.apache.phoenix.spark")
+      .option("table", "TABLE1")
+      .option("zkUrl", quorumAddress)
+      .load()
 
     // Save to TABLE21_COPY
-    df.save("org.apache.phoenix.spark", SaveMode.Overwrite, Map("table" -> "TABLE1_COPY", "zkUrl" -> quorumAddress))
+    df
+      .write
+      .format("org.apache.phoenix.spark")
+      .mode(SaveMode.Overwrite)
+      .option("table", "TABLE1_COPY")
+      .option("zkUrl", quorumAddress)
+      .save()
 
     // Verify results
     stmt = conn.createStatement()

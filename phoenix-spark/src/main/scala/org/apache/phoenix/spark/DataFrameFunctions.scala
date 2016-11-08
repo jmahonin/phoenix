@@ -16,13 +16,14 @@ package org.apache.phoenix.spark
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.io.NullWritable
 import org.apache.phoenix.mapreduce.PhoenixOutputFormat
-import org.apache.phoenix.mapreduce.util.{ColumnInfoToStringEncoderDecoder, PhoenixConfigurationUtil}
+import org.apache.phoenix.mapreduce.util.PhoenixConfigurationUtil
 import org.apache.phoenix.util.SchemaUtil
-import org.apache.spark.Logging
 import org.apache.spark.sql.DataFrame
+
 import scala.collection.JavaConversions._
 
-class DataFrameFunctions(data: DataFrame) extends Logging with Serializable {
+
+class DataFrameFunctions(data: DataFrame) extends Serializable {
 
   def saveToPhoenix(tableName: String, conf: Configuration = new Configuration,
                     zkUrl: Option[String] = None): Unit = {
@@ -38,7 +39,8 @@ class DataFrameFunctions(data: DataFrame) extends Logging with Serializable {
     val zkUrlFinal = ConfigurationUtil.getZookeeperURL(outConfig)
 
     // Map the row objects into PhoenixRecordWritable
-    val phxRDD = data.mapPartitions{ rows =>
+    import data.sqlContext.implicits._
+    val phxDS = data.mapPartitions{ rows =>
  
        // Create a within-partition config to retrieve the ColumnInfo list
        @transient val partitionConfig = ConfigurationUtil.getOutputConfiguration(tableName, fieldArray, zkUrlFinal)
@@ -52,7 +54,7 @@ class DataFrameFunctions(data: DataFrame) extends Logging with Serializable {
     }
 
     // Save it
-    phxRDD.saveAsNewAPIHadoopFile(
+    phxDS.rdd.saveAsNewAPIHadoopFile(
       "",
       classOf[NullWritable],
       classOf[PhoenixRecordWritable],
