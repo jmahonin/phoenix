@@ -39,8 +39,7 @@ class DataFrameFunctions(data: DataFrame) extends Serializable {
     val zkUrlFinal = ConfigurationUtil.getZookeeperURL(outConfig)
 
     // Map the row objects into PhoenixRecordWritable
-    import data.sqlContext.implicits._
-    val phxDS = data.mapPartitions{ rows =>
+    val phxDS = data.rdd.mapPartitions{ rows =>
  
        // Create a within-partition config to retrieve the ColumnInfo list
        @transient val partitionConfig = ConfigurationUtil.getOutputConfiguration(tableName, fieldArray, zkUrlFinal)
@@ -54,7 +53,7 @@ class DataFrameFunctions(data: DataFrame) extends Serializable {
     }
 
     // Save it
-    phxDS.rdd.saveAsNewAPIHadoopFile(
+    phxDS.saveAsNewAPIHadoopFile(
       "",
       classOf[NullWritable],
       classOf[PhoenixRecordWritable],
